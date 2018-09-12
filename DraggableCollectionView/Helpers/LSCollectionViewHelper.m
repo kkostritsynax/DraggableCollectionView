@@ -31,7 +31,6 @@ typedef NS_ENUM(NSInteger, _ScrollingDirection) {
 @interface LSCollectionViewHelper ()
 {
     NSIndexPath *lastIndexPath;
-    UIImageView *mockCell;
     CGPoint mockCenter;
     CGPoint fingerTranslation;
     CADisplayLink *timer;
@@ -40,9 +39,11 @@ typedef NS_ENUM(NSInteger, _ScrollingDirection) {
     BOOL canScroll;
 }
 @property (readonly, nonatomic) LSCollectionViewLayoutHelper *layoutHelper;
+@property (nonatomic, strong) UIImageView *mockCell;
 @end
 
 @implementation LSCollectionViewHelper
+@synthesize mockCell = mockCell;
 
 - (id)initWithCollectionView:(UICollectionView *)collectionView
 {
@@ -216,11 +217,9 @@ typedef NS_ENUM(NSInteger, _ScrollingDirection) {
     mockCell.image = [self imageFromCell:cell];
     mockCenter = mockCell.center;
     [self.collectionView addSubview:mockCell];
-    [UIView
-            animateWithDuration:0.3
-                     animations:^{
-                         mockCell.transform = CGAffineTransformMakeScale(1.1f, 1.1f);
-                     }
+    [UIView animateWithDuration:0.3 animations:^{
+        self.mockCell.transform = CGAffineTransformMakeScale(1.1f, 1.1f);
+    }
                      completion:nil];
 
     // Start warping
@@ -257,18 +256,15 @@ typedef NS_ENUM(NSInteger, _ScrollingDirection) {
 
     // Switch mock for cell
     UICollectionViewLayoutAttributes *layoutAttributes = [self.collectionView layoutAttributesForItemAtIndexPath:self.layoutHelper.hideIndexPath];
-    [UIView
-            animateWithDuration:0.3
-                     animations:^{
-                         mockCell.center = layoutAttributes.center;
-                         mockCell.transform = CGAffineTransformMakeScale(1.f, 1.f);
-                     }
-                     completion:^(BOOL finished) {
-                         [mockCell removeFromSuperview];
-                         mockCell = nil;
-                         self.layoutHelper.hideIndexPath = nil;
-                         [self.collectionView.collectionViewLayout invalidateLayout];
-                     }];
+    [UIView animateWithDuration:0.3 animations:^{
+        self.mockCell.center = layoutAttributes.center;
+        self.mockCell.transform = CGAffineTransformMakeScale(1.f, 1.f);
+    } completion:^(BOOL finished) {
+         [self.mockCell removeFromSuperview];
+         self.mockCell = nil;
+         self.layoutHelper.hideIndexPath = nil;
+         [self.collectionView.collectionViewLayout invalidateLayout];
+     }];
 
     // Reset
     [self invalidatesScrollTimer];
