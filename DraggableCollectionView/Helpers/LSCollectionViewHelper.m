@@ -55,11 +55,6 @@ typedef NS_ENUM(NSInteger, _ScrollingDirection) {
         _scrollingEdgeInsets = UIEdgeInsetsMake(50.0f, 50.0f, 50.0f, 50.0f);
         _scrollingSpeed = 300.f;
         
-        _longPressGestureRecognizer = [[UILongPressGestureRecognizer alloc]
-                                       initWithTarget:self
-                                       action:@selector(handleLongPressGesture:)];
-        [_collectionView addGestureRecognizer:_longPressGestureRecognizer];
-        
         _panPressGestureRecognizer = [[UIPanGestureRecognizer alloc]
                                       initWithTarget:self action:@selector(handlePanGesture:)];
         _panPressGestureRecognizer.delegate = self;
@@ -68,7 +63,6 @@ typedef NS_ENUM(NSInteger, _ScrollingDirection) {
         
         for (UIGestureRecognizer *gestureRecognizer in _collectionView.gestureRecognizers) {
             if ([gestureRecognizer isKindOfClass:[UILongPressGestureRecognizer class]]) {
-                [gestureRecognizer requireGestureRecognizerToFail:_longPressGestureRecognizer];
                 break;
             }
         }
@@ -87,7 +81,6 @@ typedef NS_ENUM(NSInteger, _ScrollingDirection) {
 {
     canWarp = [self.collectionView.collectionViewLayout conformsToProtocol:@protocol(UICollectionViewLayout_Warpable)];
     canScroll = [self.collectionView.collectionViewLayout respondsToSelector:@selector(scrollDirection)];
-    _longPressGestureRecognizer.enabled = _panPressGestureRecognizer.enabled = canWarp && self.enabled;
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
@@ -103,7 +96,6 @@ typedef NS_ENUM(NSInteger, _ScrollingDirection) {
 - (void)setEnabled:(BOOL)enabled
 {
     _enabled = enabled;
-    _longPressGestureRecognizer.enabled = canWarp && enabled;
     _panPressGestureRecognizer.enabled = canWarp && enabled;
 }
 
@@ -207,97 +199,6 @@ typedef NS_ENUM(NSInteger, _ScrollingDirection) {
     }
     
     return indexPath;
-}
-
-- (void)handleLongPressGesture:(UILongPressGestureRecognizer *)sender
-{
-    if (sender.state == UIGestureRecognizerStateChanged) {
-        return;
-    }
-    if (![self.collectionView.dataSource conformsToProtocol:@protocol(UICollectionViewDataSource_Draggable)]) {
-        return;
-    }
-    
-    NSIndexPath *indexPath = [self indexPathForItemClosestToPoint:[sender locationInView:self.collectionView]];
-    
-    switch (sender.state) {
-        case UIGestureRecognizerStateBegan: {
-            if (indexPath == nil) {
-                return;
-            }
-            if (![(id<UICollectionViewDataSource_Draggable>)self.collectionView.dataSource
-                  collectionView:self.collectionView
-                  canMoveItemAtIndexPath:indexPath]) {
-                return;
-            }
-            // Create mock cell to drag around
-            UICollectionViewCell *cell = [self.collectionView cellForItemAtIndexPath:indexPath];
-            cell.highlighted = NO;
-            [mockCell removeFromSuperview];
-            mockCell = [[UIImageView alloc] initWithFrame:cell.frame];
-            mockCell.image = [self imageFromCell:cell];
-            mockCenter = mockCell.center;
-            [self.collectionView addSubview:mockCell];
-            [UIView
-             animateWithDuration:0.3
-             animations:^{
-                 mockCell.transform = CGAffineTransformMakeScale(1.1f, 1.1f);
-             }
-             completion:nil];
-            
-            // Start warping
-            lastIndexPath = indexPath;
-            self.layoutHelper.fromIndexPath = indexPath;
-            self.layoutHelper.hideIndexPath = indexPath;
-            self.layoutHelper.toIndexPath = indexPath;
-            [self.collectionView.collectionViewLayout invalidateLayout];
-        } break;
-        case UIGestureRecognizerStateEnded:
-        case UIGestureRecognizerStateCancelled: {
-            if(self.layoutHelper.fromIndexPath == nil) {
-                return;
-            }
-            // Need these for later, but need to nil out layoutHelper's references sooner
-            NSIndexPath *fromIndexPath = self.layoutHelper.fromIndexPath;
-            NSIndexPath *toIndexPath = self.layoutHelper.toIndexPath;
-            // Tell the data source to move the item
-            id<UICollectionViewDataSource_Draggable> dataSource = (id<UICollectionViewDataSource_Draggable>)self.collectionView.dataSource;
-            [dataSource collectionView:self.collectionView moveItemAtIndexPath:fromIndexPath toIndexPath:toIndexPath];
-           
-            // Move the item
-            [self.collectionView performBatchUpdates:^{
-                [self.collectionView moveItemAtIndexPath:fromIndexPath toIndexPath:toIndexPath];
-                self.layoutHelper.fromIndexPath = nil;
-                self.layoutHelper.toIndexPath = nil;
-            } completion:^(BOOL finished) {
-                if (finished) {
-                    if ([dataSource respondsToSelector:@selector(collectionView:didMoveItemAtIndexPath:toIndexPath:)]) {
-                        [dataSource collectionView:self.collectionView didMoveItemAtIndexPath:fromIndexPath toIndexPath:toIndexPath];
-                    }
-                }
-            }];
-            
-            // Switch mock for cell
-            UICollectionViewLayoutAttributes *layoutAttributes = [self.collectionView layoutAttributesForItemAtIndexPath:self.layoutHelper.hideIndexPath];
-            [UIView
-             animateWithDuration:0.3
-             animations:^{
-                 mockCell.center = layoutAttributes.center;
-                 mockCell.transform = CGAffineTransformMakeScale(1.f, 1.f);
-             }
-             completion:^(BOOL finished) {
-                 [mockCell removeFromSuperview];
-                 mockCell = nil;
-                 self.layoutHelper.hideIndexPath = nil;
-                 [self.collectionView.collectionViewLayout invalidateLayout];
-             }];
-            
-            // Reset
-            [self invalidatesScrollTimer];
-            lastIndexPath = nil;
-        } break;
-        default: break;
-    }
 }
 
 - (void)warpToIndexPath:(NSIndexPath *)indexPath
