@@ -1,6 +1,6 @@
 #import <Foundation/Foundation.h>
 
-@protocol DraggableCell <NSObject>
+@protocol UICollectionViewCell_Draggable <NSObject>
 
 @property (nonatomic, readonly) UIView *dragArea;
 

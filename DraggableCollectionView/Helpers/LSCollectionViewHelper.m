@@ -8,7 +8,7 @@
 #import "UICollectionViewLayout_Warpable.h"
 #import "UICollectionViewDataSource_Draggable.h"
 #import "LSCollectionViewLayoutHelper.h"
-#import "DraggableCell.h"
+#import "UICollectionViewCell_Draggable.h"
 #import <QuartzCore/QuartzCore.h>
 
 static int kObservingCollectionViewLayoutContext;
@@ -128,8 +128,8 @@ typedef NS_ENUM(NSInteger, _ScrollingDirection) {
     NSIndexPath *indexPath = [self indexPathForItemClosestToPoint:[gestureRecognizer locationInView:self.collectionView]];
     UICollectionViewCell *cell = [self.collectionView cellForItemAtIndexPath:indexPath];
 
-    if ([cell conformsToProtocol:@protocol(DraggableCell)]) {
-        UICollectionViewCell<DraggableCell> *draggableCell = (UICollectionViewCell <DraggableCell> *) cell;
+    if ([cell conformsToProtocol:@protocol(UICollectionViewCell_Draggable)]) {
+        UICollectionViewCell<UICollectionViewCell_Draggable> *draggableCell = (UICollectionViewCell <UICollectionViewCell_Draggable> *) cell;
         UIView *dragArea = draggableCell.dragArea;
         if (dragArea != nil) {
             CGPoint point = [gestureRecognizer locationInView:dragArea];
