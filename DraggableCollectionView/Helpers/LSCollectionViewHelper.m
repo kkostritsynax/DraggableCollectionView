@@ -300,7 +300,7 @@ typedef NS_ENUM(NSInteger, _ScrollingDirection) {
     if (canScroll) {
         UICollectionViewFlowLayout *scrollLayout = (UICollectionViewFlowLayout*)self.collectionView.collectionViewLayout;
         if([scrollLayout scrollDirection] == UICollectionViewScrollDirectionVertical) {
-            if (mockCell.center.y < (CGRectGetMinY(self.collectionView.bounds) + self.scrollingEdgeInsets.top)) {
+            if (mockCell.center.y - scrollLayout.headerReferenceSize.height/2 < (CGRectGetMinY(self.collectionView.bounds) + self.scrollingEdgeInsets.top)) {
                 [self setupScrollTimerInDirection:_ScrollingDirectionUp];
             }
             else {
@@ -366,12 +366,13 @@ typedef NS_ENUM(NSInteger, _ScrollingDirection) {
     CGPoint contentOffset = self.collectionView.contentOffset;
     CGFloat distance = self.scrollingSpeed / 60.f;
     CGPoint translation = CGPointZero;
-    
+    UICollectionViewFlowLayout *scrollLayout = (UICollectionViewFlowLayout*)self.collectionView.collectionViewLayout;
+
     switch(scrollingDirection) {
         case _ScrollingDirectionUp: {
             distance = -distance;
             if ((contentOffset.y + distance) <= 0.f) {
-                distance = -contentOffset.y;
+                distance = -contentOffset.y - scrollLayout.headerReferenceSize.height;
             }
             translation = CGPointMake(0.f, distance);
         } break;
